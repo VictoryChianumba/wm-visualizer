@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import ControlBar from "@/components/ControlBar";
 import GameFrame from "@/components/GameFrame";
 import AttentionHeatmap from "@/components/AttentionHeatmap";
+import MorphingGraph from "@/components/MorphingGraph";
 import ActivationNorms from "@/components/ActivationNorms";
 import LogPane from "@/components/LogPane";
 import type { AgentInfo } from "@/hooks/useVisualizerSocket";
@@ -19,6 +20,7 @@ export default function Home() {
   const [selectedLayer, setSelectedLayer] = useState<number>(5);
   const [selectedDevice, setSelectedDevice] = useState<string>("cpu");
   const [availableDevices, setAvailableDevices] = useState<string[]>(["cpu"]);
+  const [activeView, setActiveView] = useState<"heatmap" | "graph">("heatmap");
 
   // Fetch available devices from the backend once on mount
   useEffect(() => {
@@ -91,16 +93,54 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Middle: attention heatmap */}
+        {/* Middle: attention heatmap / graph toggle */}
         <div className="flex-1 flex flex-col min-w-0">
-          <PaneTitle>Attention · Layer {selectedLayer}</PaneTitle>
+          {/* Custom header with view-mode toggle — layer slider in ControlBar
+              controls both views; switching view never resets selectedLayer */}
+          <div className="px-2 py-0.5 bg-gray-900 border-b border-gray-800 flex-shrink-0 flex items-center justify-between">
+            <span className="text-[10px] text-gray-500 uppercase tracking-wider">
+              Attention · Layer {selectedLayer}
+            </span>
+            <div className="flex items-center gap-0.5">
+              <button
+                data-testid="view-toggle-heatmap"
+                className={`px-2 py-0.5 text-[9px] rounded transition-colors ${
+                  activeView === "heatmap"
+                    ? "bg-indigo-600 text-white"
+                    : "text-gray-500 hover:text-gray-300"
+                }`}
+                onClick={() => setActiveView("heatmap")}
+              >
+                Heatmap
+              </button>
+              <button
+                data-testid="view-toggle-graph"
+                className={`px-2 py-0.5 text-[9px] rounded transition-colors ${
+                  activeView === "graph"
+                    ? "bg-indigo-600 text-white"
+                    : "text-gray-500 hover:text-gray-300"
+                }`}
+                onClick={() => setActiveView("graph")}
+              >
+                Graph
+              </button>
+            </div>
+          </div>
           <div className="flex-1 overflow-hidden">
-            <AttentionHeatmap
-              attention={state.attention}
-              selectedLayer={selectedLayer}
-              tokenLayout={state.token_layout}
-              numHeads={numHeads}
-            />
+            {activeView === "heatmap" ? (
+              <AttentionHeatmap
+                attention={state.attention}
+                selectedLayer={selectedLayer}
+                tokenLayout={state.token_layout}
+                numHeads={numHeads}
+              />
+            ) : (
+              <MorphingGraph
+                attention={state.attention}
+                selectedLayer={selectedLayer}
+                tokenLayout={state.token_layout}
+              />
+            )}
           </div>
         </div>
 
