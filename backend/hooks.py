@@ -37,7 +37,7 @@ class IrisHookExtractor:
     def __init__(self) -> None:
         self._handles: list = []
         self._attn_data: Dict[int, torch.Tensor] = {}
-        self._norms_data: Dict[int, float] = {}
+        self._norms_data: Dict[int, torch.Tensor] = {}  # 0-d tensors; .item() deferred to consumer
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -86,7 +86,7 @@ class IrisHookExtractor:
 
     def get_data(
         self,
-    ) -> Tuple[Optional[Dict[int, torch.Tensor]], Optional[Dict[int, float]]]:
+    ) -> Tuple[Optional[Dict[int, torch.Tensor]], Optional[Dict[int, torch.Tensor]]]:
         """
         Return shallow copies of the latest attention and norm data.
 
@@ -113,8 +113,10 @@ class IrisHookExtractor:
     def _make_attn_hook(self, layer_idx: int):
         def hook(module: nn.Module, inp: tuple, out: torch.Tensor) -> None:
             t0 = time.perf_counter()
-            # inp[0]: (B, nh, T_q, T_k) — post-softmax attention before dropout
-            self._attn_data[layer_idx] = inp[0].detach().clone()
+            # inp[0]: (B, nh, T_q, T_k) — post-softmax attention before dropout.
+            # attn_drop is nn.Dropout (inplace=False), so it never mutates inp[0]
+            # after this hook returns — .detach() alone is safe, no clone needed.
+            self._attn_data[layer_idx] = inp[0].detach()
             ms = (time.perf_counter() - t0) * 1000.0
             if ms > HOOK_LATENCY_WARN_MS:
                 logger.warning("Attn hook layer %d: %.1f ms (threshold %.0f ms)",
@@ -123,6 +125,9 @@ class IrisHookExtractor:
 
     def _make_norm_hook(self, layer_idx: int):
         def hook(module: nn.Module, inp: tuple, out: torch.Tensor) -> None:
-            # out: (B, T, embed_dim) — residual stream after this block
-            self._norms_data[layer_idx] = out[0, -1].norm().item()
+            # out: (B, T, embed_dim) — residual stream after this block.
+            # Store a 0-d tensor; do NOT call .item() here — that would force a
+            # GPU→CPU sync on every layer inside the forward pass.  The consumer
+            # (inference.py) calls .item() once, after the full forward completes.
+            self._norms_data[layer_idx] = out[0, -1].norm().detach()
         return hook

@@ -108,8 +108,13 @@ class TestHookExtraction:
         assert norms is not None
         assert len(norms) == 2
         for i in range(2):
-            assert isinstance(norms[i], float)
-            assert norms[i] > 0
+            # get_data() now returns 0-d tensors for norms; .item() is deferred to
+            # the consumer (inference.py) so it runs once after the full forward pass
+            # rather than forcing a GPU→CPU sync per layer inside the hook callback.
+            import torch as _torch
+            assert isinstance(norms[i], _torch.Tensor)
+            assert norms[i].ndim == 0          # 0-dimensional (scalar tensor)
+            assert norms[i].item() > 0
 
         hooks.detach()
 

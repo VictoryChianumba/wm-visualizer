@@ -447,7 +447,7 @@ class InferenceEngine:
             # --- World model forward (single block, no KV cache) for hooks ---
             t_wm = time.perf_counter()
             attn_data: Optional[Dict[int, torch.Tensor]] = None
-            norms_data: Optional[Dict[int, float]] = None
+            norms_data: Optional[Dict[int, torch.Tensor]] = None  # 0-d tensors
             try:
                 with torch.no_grad():
                     obs_tokens = tokenizer.encode(
@@ -481,8 +481,11 @@ class InferenceEngine:
                     # (1, nh, T_q, T_k) → nested Python list [nh][T_q][T_k]
                     attention_payload[str(li)] = attn_t.squeeze(0).cpu().tolist()
 
+            # .item() is called here — once, outside the forward pass, after all
+            # layers have completed — rather than per-layer inside the hook callback.
+            # This avoids 10× GPU→CPU syncs interleaved with the transformer blocks.
             norms_payload = [
-                norms_data[i] if norms_data and i in norms_data else 0.0
+                norms_data[i].item() if norms_data and i in norms_data else 0.0
                 for i in range(num_layers)
             ]
 
