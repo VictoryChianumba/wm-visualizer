@@ -191,7 +191,17 @@ export function useVisualizerSocket(
           attention: f.attention,
           norms: f.norms,
           metrics: f.metrics,
-          token_layout: f.token_layout,
+          // Preserve the previous token_layout reference when labels haven't
+          // changed — a new JSON-parsed object every frame would cause
+          // MorphingGraph's Effect 1 (dep: [tokenLayout]) to fire every frame,
+          // wiping and rebuilding the SVG each time and preventing the force
+          // simulation from ever converging.
+          token_layout:
+            prev.token_layout !== null &&
+            f.token_layout.labels.join("\0") ===
+              prev.token_layout.labels.join("\0")
+              ? prev.token_layout
+              : f.token_layout,
         }));
       } else if (type === "config") {
         const cfg = msg as unknown as Partial<ModelConfig> & {
