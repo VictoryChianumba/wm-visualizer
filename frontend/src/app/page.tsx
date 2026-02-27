@@ -9,12 +9,34 @@ import LogPane from "@/components/LogPane";
 import type { AgentInfo } from "@/hooks/useVisualizerSocket";
 import { useVisualizerSocket } from "@/hooks/useVisualizerSocket";
 
+const API_BASE =
+  typeof window !== "undefined"
+    ? `http://${window.location.hostname}:8000`
+    : "http://localhost:8000";
+
 export default function Home() {
   const [selectedAgent, setSelectedAgent] = useState<string>("");
   const [selectedLayer, setSelectedLayer] = useState<number>(5);
+  const [selectedDevice, setSelectedDevice] = useState<string>("cpu");
+  const [availableDevices, setAvailableDevices] = useState<string[]>(["cpu"]);
+
+  // Fetch available devices from the backend once on mount
+  useEffect(() => {
+    fetch(`${API_BASE}/devices`)
+      .then((r) => r.json())
+      .then((data: { available: string[]; default: string }) => {
+        setAvailableDevices(data.available);
+        setSelectedDevice(data.default);
+      })
+      .catch(() => {
+        // Backend not ready yet — keep cpu default, will retry on reconnect
+      });
+  }, []);
 
   const { state, sendControl } = useVisualizerSocket(
-    selectedAgent || undefined
+    selectedAgent || undefined,
+    undefined,
+    selectedDevice,
   );
 
   // Once we receive the agent list from the backend, default-select the first
@@ -48,6 +70,9 @@ export default function Home() {
         agents={agents}
         selectedAgent={selectedAgent}
         onAgentChange={handleAgentChange}
+        availableDevices={availableDevices}
+        selectedDevice={selectedDevice}
+        onDeviceChange={setSelectedDevice}
         selectedLayer={selectedLayer}
         maxLayer={numLayers - 1}
         onLayerChange={setSelectedLayer}

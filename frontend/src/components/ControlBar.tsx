@@ -6,6 +6,9 @@ interface Props {
   agents: AgentInfo[];
   selectedAgent: string;
   onAgentChange: (agent: AgentInfo) => void;
+  availableDevices: string[];
+  selectedDevice: string;
+  onDeviceChange: (device: string) => void;
   selectedLayer: number;
   maxLayer: number;
   onLayerChange: (layer: number) => void;
@@ -18,6 +21,9 @@ export default function ControlBar({
   agents,
   selectedAgent,
   onAgentChange,
+  availableDevices,
+  selectedDevice,
+  onDeviceChange,
   selectedLayer,
   maxLayer,
   onLayerChange,
@@ -34,8 +40,25 @@ export default function ControlBar({
       payload: {
         checkpoint_path: agent.path,
         env_id: agent.env_id,
+        device: selectedDevice,
       },
     });
+  }
+
+  function handleDeviceChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    onDeviceChange(e.target.value);
+    // If an agent is already selected, reload it on the new device
+    const agent = agents.find((a) => a.id === selectedAgent);
+    if (agent) {
+      sendControl({
+        command: "switch_agent",
+        payload: {
+          checkpoint_path: agent.path,
+          env_id: agent.env_id,
+          device: e.target.value,
+        },
+      });
+    }
   }
 
   const btn =
@@ -58,6 +81,23 @@ export default function ControlBar({
           {agents.map((a) => (
             <option key={a.id} value={a.id}>
               {a.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Device selector */}
+      <div className="flex items-center gap-2">
+        <label className="text-xs text-gray-400 whitespace-nowrap">Device</label>
+        <select
+          className="bg-gray-800 text-gray-100 text-xs rounded px-2 py-1 border border-gray-700 focus:outline-none focus:border-indigo-500"
+          value={selectedDevice}
+          onChange={handleDeviceChange}
+          disabled={loading}
+        >
+          {availableDevices.map((d) => (
+            <option key={d} value={d}>
+              {d}
             </option>
           ))}
         </select>

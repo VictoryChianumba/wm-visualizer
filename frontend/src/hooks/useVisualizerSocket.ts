@@ -92,7 +92,8 @@ let _eventIdCounter = 0;
 
 export function useVisualizerSocket(
   agentName?: string,
-  envId?: string
+  envId?: string,
+  device?: string,
 ): {
   state: VisualizerState;
   sendControl: (cmd: ControlCommand) => Promise<void>;
@@ -136,6 +137,7 @@ export function useVisualizerSocket(
     if (agentName) {
       const params = new URLSearchParams({ agent: agentName });
       if (envId) params.set("env_id", envId);
+      if (device) params.set("device", device);
       url = `${WS_URL}?${params}`;
     }
 
@@ -233,7 +235,7 @@ export function useVisualizerSocket(
         }
       }
     };
-  }, [agentName, envId, addEvent]);
+  }, [agentName, envId, device, addEvent]);
 
   // Mount / unmount / agentName change
   useEffect(() => {

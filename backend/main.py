@@ -4,7 +4,7 @@ FastAPI application and WebSocket server for the WM Visualizer.
 Endpoints
 ---------
   WS  /ws                   — stream FrameData JSON; accepts query params
-                              ?agent=<name>&env_id=<id>&device=<cpu|cuda>
+                              ?agent=<name>&env_id=<id>&device=<cpu|mps|cuda>
   GET /agents               — list available checkpoints
   GET /config               — current model config
   POST /control             — episode control (loop, restart, pause, resume,
@@ -110,6 +110,24 @@ async def list_agents() -> List[dict]:
     return agents
 
 
+@app.get("/devices")
+async def list_devices() -> dict:
+    """
+    Return the compute devices available on this machine and the current default.
+
+    Response::
+
+        {"available": ["cpu", "mps"], "default": "mps"}
+    """
+    import torch
+    available = ["cpu"]
+    if torch.backends.mps.is_available():
+        available.append("mps")
+    if torch.cuda.is_available():
+        available.append("cuda")
+    return {"available": available, "default": DEFAULT_DEVICE}
+
+
 @app.get("/config")
 async def get_config() -> dict:
     """Return the current model config or an empty dict if no agent is loaded."""
@@ -130,7 +148,7 @@ async def control(cmd: ControlCommand) -> dict:
 
         {"checkpoint_path": "/path/to/Agent.pt",
          "env_id": "BreakoutNoFrameskip-v4",
-         "device": "cpu"}
+         "device": "cpu|mps|cuda"}
     """
     loop = asyncio.get_event_loop()
 
