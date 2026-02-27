@@ -1,0 +1,13 @@
+# Core dependencies
+matplotlib>=3.7
+numpy
+torch
+gymnasium==0.29.1
+opencv-python
+pygame
+
+# box2d for CarRacing (requires swig: pip install swig first)
+# gymnasium[box2d]==0.29.1
+
+# Dev / test
+pytest>=7.0

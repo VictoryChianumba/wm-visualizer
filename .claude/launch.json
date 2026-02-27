@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "visualizer",
+      "runtimeExecutable": ".venv/bin/python",
+      "runtimeArgs": ["visualizer.py", "--agent_dir", "../world-models-carracing/checkpoints/"],
+      "port": 0
+    },
+    {
+      "name": "tests",
+      "runtimeExecutable": ".venv/bin/pytest",
+      "runtimeArgs": ["tests/test_visualizer.py", "-v"],
+      "port": 0
+    }
+  ]
+}
